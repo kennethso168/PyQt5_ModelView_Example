@@ -91,13 +91,7 @@ class SimplePrefModel(QtCore.QAbstractListModel):
     Also the views should not handle the data store directly. This class adapts the data from data store for viewing
     and also provides methods for altering the data.
     """
-    @unique
-    class Items(IntEnum):
-        OPTION1 = PrefStore.Keys.OPTION1
-        OPTION2 = PrefStore.Keys.OPTION2
-        LINE1 = PrefStore.Keys.LINE1
-        LINE2 = PrefStore.Keys.LINE2
-        ENABLED_ITEMS = PrefStore.Keys.ENABLED_ITEMS
+    Items = PrefStore.Keys
 
     def __init__(self):
         super().__init__()
