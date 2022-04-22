@@ -159,7 +159,6 @@ class EnabledItemsModel(QtCore.QAbstractListModel):
 
     def _handle_change(self, top_left: QtCore.QModelIndex, bottom_right: QtCore.QModelIndex, roles: list):
         if top_left.row() == SimplePrefModel.Items.ENABLED_ITEMS:
-            print("Emit signal EnabledItemsModel")
             self.layoutAboutToBeChanged.emit()
             self.layoutChanged.emit()
 
@@ -213,7 +212,6 @@ class DisabledItemsModel(QtCore.QAbstractListModel):
 
     def _handle_change(self, top_left: QtCore.QModelIndex, bottom_right: QtCore.QModelIndex, roles: list):
         if top_left.row() == SimplePrefModel.Items.ENABLED_ITEMS:
-            print("Emit signal DisabledItemsModel")
             self.layoutAboutToBeChanged.emit()
             self.layoutChanged.emit()
 
