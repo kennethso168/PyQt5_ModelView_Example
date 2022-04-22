@@ -147,7 +147,7 @@ class EnabledItemsModel(QtCore.QAbstractListModel):
     def __init__(self, parent_model: SimplePrefModel):
         super().__init__()
         self._parent_model = parent_model
-        #self._parent_model.dataChanged.connect()
+        self._parent_model.dataChanged.connect(self._handle_change)
 
     def _get_list(self):
         index = self._parent_model.index(SimplePrefModel.Items.ENABLED_ITEMS)
@@ -156,6 +156,12 @@ class EnabledItemsModel(QtCore.QAbstractListModel):
     def _set_list(self, my_list: list):
         index = self._parent_model.index(SimplePrefModel.Items.ENABLED_ITEMS)
         return self._parent_model.setData(index, my_list, Qt.EditRole)
+
+    def _handle_change(self, top_left: QtCore.QModelIndex, bottom_right: QtCore.QModelIndex, roles: list):
+        if top_left.row() == SimplePrefModel.Items.ENABLED_ITEMS:
+            print("Emit signal EnabledItemsModel")
+            self.layoutAboutToBeChanged.emit()
+            self.layoutChanged.emit()
 
     def data(self, index, role):
         if role == Qt.DisplayRole:
@@ -171,12 +177,6 @@ class EnabledItemsModel(QtCore.QAbstractListModel):
         items = self._get_list()
         items[row1], items[row2] = items[row2], items[row1]
         self._set_list(items)
-        # Notify that the data in the two rows are changed
-        # Note that to get a QModelIndex, you call the index method of the model
-        first_index = self.index(row1)
-        second_index = self.index(row2)
-        self.dataChanged.emit(first_index, first_index)
-        self.dataChanged.emit(second_index, second_index)
 
     def add(self, item):
         """
@@ -186,8 +186,6 @@ class EnabledItemsModel(QtCore.QAbstractListModel):
         items = self._get_list()
         items.append(item)
         self._set_list(items)
-        # Note that layoutChanged is needed as the number of items in the model become different
-        self.layoutChanged.emit()
 
     def remove(self, item):
         """
@@ -197,7 +195,6 @@ class EnabledItemsModel(QtCore.QAbstractListModel):
         items = self._get_list()
         items.remove(item)
         self._set_list(items)
-        self.layoutChanged.emit()
 
 class DisabledItemsModel(QtCore.QAbstractListModel):
     """
@@ -206,12 +203,19 @@ class DisabledItemsModel(QtCore.QAbstractListModel):
     def __init__(self, parent_model: SimplePrefModel):
         super().__init__()
         self._parent_model = parent_model
+        self._parent_model.dataChanged.connect(self._handle_change)
 
     def _get_disabled_items(self):
         index = self._parent_model.index(SimplePrefModel.Items.ENABLED_ITEMS)
         enabled_items = self._parent_model.data(index, Qt.EditRole)
         # All available items that are not enabled are disabled
         return list(set(AVAILABLE_ITEMS) - set(enabled_items))
+
+    def _handle_change(self, top_left: QtCore.QModelIndex, bottom_right: QtCore.QModelIndex, roles: list):
+        if top_left.row() == SimplePrefModel.Items.ENABLED_ITEMS:
+            print("Emit signal DisabledItemsModel")
+            self.layoutAboutToBeChanged.emit()
+            self.layoutChanged.emit()
 
     def data(self, index, role):
         if role == Qt.DisplayRole:
@@ -300,8 +304,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             index = indexes[0]
             target = self.disabled_items_model.data(index, Qt.DisplayRole)
             self.enabled_items_model.add(target)
-            # Refresh the DisabledItemsModel
-            self.disabled_items_model.layoutChanged.emit()
             # Clear the selection of the disabled items (as the selected items has already been moved away)
             self.lvDisabled.clearSelection()
 
@@ -314,7 +316,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             index = indexes[0]
             target = self.enabled_items_model.data(index, Qt.DisplayRole)
             self.enabled_items_model.remove(target)
-            self.disabled_items_model.layoutChanged.emit()
             self.lvEnabled.clearSelection()
 
 if __name__ == "__main__":
