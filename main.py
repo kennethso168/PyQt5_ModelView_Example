@@ -97,6 +97,7 @@ class SimplePrefModel(QtCore.QAbstractListModel):
         OPTION2 = PrefStore.Keys.OPTION2
         LINE1 = PrefStore.Keys.LINE1
         LINE2 = PrefStore.Keys.LINE2
+        ENABLED_ITEMS = PrefStore.Keys.ENABLED_ITEMS
 
     def __init__(self):
         super().__init__()
@@ -149,24 +150,33 @@ class EnabledItemsModel(QtCore.QAbstractListModel):
     The views should not handle the data store directly. This class adapts the data from data store for viewing
     and also provides methods for altering the data.
     """
-    def __init__(self):
+    def __init__(self, parent_model: SimplePrefModel):
         super().__init__()
-        self._pref_store = PrefStore()
+        self._parent_model = parent_model
+        #self._parent_model.dataChanged.connect()
+
+    def _get_list(self):
+        index = self._parent_model.index(SimplePrefModel.Items.ENABLED_ITEMS)
+        return self._parent_model.data(index, Qt.EditRole)
+
+    def _set_list(self, my_list: list):
+        index = self._parent_model.index(SimplePrefModel.Items.ENABLED_ITEMS)
+        return self._parent_model.setData(index, my_list, Qt.EditRole)
 
     def data(self, index, role):
         if role == Qt.DisplayRole:
-            return self._pref_store.get_pref(PrefStore.Keys.ENABLED_ITEMS)[index.row()]
+            return self._get_list()[index.row()]
 
     def rowCount(self, parent: QtCore.QModelIndex = ...) -> int:
-        return len(self._pref_store.get_pref(PrefStore.Keys.ENABLED_ITEMS))
+        return len(self._get_list())
 
     def swap(self, row1: int, row2: int):
         """
         Swap two rows in this model
         """
-        items = self._pref_store.get_pref(PrefStore.Keys.ENABLED_ITEMS)
+        items = self._get_list()
         items[row1], items[row2] = items[row2], items[row1]
-        self._pref_store.set_pref(PrefStore.Keys.ENABLED_ITEMS, items)
+        self._set_list(items)
         # Notify that the data in the two rows are changed
         # Note that to get a QModelIndex, you call the index method of the model
         first_index = self.index(row1)
@@ -179,9 +189,9 @@ class EnabledItemsModel(QtCore.QAbstractListModel):
         Add a row to this model
         """
         self.layoutAboutToBeChanged.emit()
-        items = self._pref_store.get_pref(PrefStore.Keys.ENABLED_ITEMS)
+        items = self._get_list()
         items.append(item)
-        self._pref_store.set_pref(PrefStore.Keys.ENABLED_ITEMS, items)
+        self._set_list(items)
         # Note that layoutChanged is needed as the number of items in the model become different
         self.layoutChanged.emit()
 
@@ -190,21 +200,22 @@ class EnabledItemsModel(QtCore.QAbstractListModel):
         Remove a row to this model
         """
         self.layoutAboutToBeChanged.emit()
-        items = self._pref_store.get_pref(PrefStore.Keys.ENABLED_ITEMS)
+        items = self._get_list()
         items.remove(item)
-        self._pref_store.set_pref(PrefStore.Keys.ENABLED_ITEMS, items)
+        self._set_list(items)
         self.layoutChanged.emit()
 
 class DisabledItemsModel(QtCore.QAbstractListModel):
     """
     The Qt Model that handles the data the lvDisabledItems QListView.
     """
-    def __init__(self):
+    def __init__(self, parent_model: SimplePrefModel):
         super().__init__()
-        self._pref_store = PrefStore()
+        self._parent_model = parent_model
 
     def _get_disabled_items(self):
-        enabled_items = self._pref_store.get_pref(PrefStore.Keys.ENABLED_ITEMS)
+        index = self._parent_model.index(SimplePrefModel.Items.ENABLED_ITEMS)
+        enabled_items = self._parent_model.data(index, Qt.EditRole)
         # All available items that are not enabled are disabled
         return list(set(AVAILABLE_ITEMS) - set(enabled_items))
 
@@ -247,12 +258,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # However, our model always only have one record, so just set it to the first one
         self.simple_pref_mapper.toFirst()
 
-        self.enabled_items_model = EnabledItemsModel()
+        self.enabled_items_model = EnabledItemsModel(self.simple_pref_model)
         self.lvEnabled.setModel(self.enabled_items_model)
         self.btnMoveItemUp.clicked.connect(self.moveUp)
         self.btnMoveItemDown.clicked.connect(self.moveDown)
 
-        self.disabled_items_model = DisabledItemsModel()
+        self.disabled_items_model = DisabledItemsModel(self.simple_pref_model)
         self.lvDisabled.setModel(self.disabled_items_model)
         self.btnMoveItemLeft.clicked.connect(self.enable)
         self.btnMoveItemRight.clicked.connect(self.disable)
